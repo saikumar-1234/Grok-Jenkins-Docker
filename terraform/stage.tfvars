@@ -8,7 +8,7 @@ vpc_cidr      = "10.1.0.0/16"
 subnet_cidr   = "10.1.1.0/24"
 
 # Sets the AMI ID for the stage environment (Ubuntu 20.04 in us-east-2, placeholder)
-ami_id        = "ami-0c55b159cbfafe1f0"
+ami_id        = "ami-08b5b3a93ed654d19"
 
 # Sets the instance type for the stage environment (medium instance for better performance)
 instance_type = "t2.medium"
