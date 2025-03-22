@@ -22,7 +22,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // Checks out the appropriate branch based on the environment (main for prod, otherwise the environment name)
-                git branch: "${params.ENVIRONMENT == 'prod' ? 'main' : params.ENVIRONMENT}", url: 'https://github.com/your-username/aws-terraform-jenkins-project.git'
+                git branch: "${params.ENVIRONMENT == 'prod' ? 'main' : params.ENVIRONMENT}", url: 'https://github.com/saikumar-1234/Grok-Jenkins-Docker.git'
             }
         }
 
