@@ -1,0 +1,200 @@
+// Defines the Jenkins pipeline
+pipeline {
+    agent any  // Runs the pipeline on any available Jenkins agent
+
+    // Defines pipeline parameters for user input
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'stage', 'prod'], description: 'Select the environment to deploy to')  // Adds a dropdown to select the environment
+    }
+
+    // Defines environment variables for the pipeline
+    environment {
+        AWS_CREDENTIALS = credentials('aws-credentials')  // Fetches AWS credentials from Jenkins credentials store
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')  // Fetches Docker Hub credentials from Jenkins
+        AWS_REGION = 'us-east-1'  // Sets a default AWS region (overridden by tfvars)
+        TF_PLAN_FILE = "tfplan"   // Defines the name of the Terraform plan file
+        TF_VAR_environment = "${params.ENVIRONMENT}"  // Passes the selected environment to Terraform as an environment variable
+    }
+
+    // Defines the pipeline stages
+    stages {
+        // Stage 1: Checkout code from GitHub
+        stage('Checkout') {
+            steps {
+                // Checks out the appropriate branch based on the environment (main for prod, otherwise the environment name)
+                git branch: "${params.ENVIRONMENT == 'prod' ? 'main' : params.ENVIRONMENT}", url: 'https://github.com/your-username/aws-terraform-jenkins-project.git'
+            }
+        }
+
+        // Stage 2: Install Terraform
+        stage('Install Terraform') {
+            steps {
+                script {  // Uses a script block to run shell commands
+                    sh '''  # Executes a multi-line shell script
+                        if ! command -v terraform &> /dev/null; then  # Checks if Terraform is installed
+                            echo "Terraform not found, installing..."  # Prints a message if Terraform is not found
+                            sudo apt-get update -y  # Updates the package list
+                            sudo apt-get install -y unzip  # Installs unzip to extract the Terraform binary
+                            wget https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip  # Downloads Terraform 1.5.7
+                            unzip terraform_1.5.7_linux_amd64.zip  # Unzips the downloaded file
+                            sudo mv terraform /usr/local/bin/  # Moves the Terraform binary to a system-wide location
+                        else
+                            echo "Terraform already installed: $(terraform --version)"  # Prints the Terraform version if already installed
+                        fi
+                    '''
+                }
+            }
+        }
+
+        // Stage 3: Install TFLint
+        stage('Install TFLint') {
+            steps {
+                script {
+                    sh '''
+                        if ! command -v tflint &> /dev/null; then  # Checks if TFLint is installed
+                            echo "TFLint not found, installing..."  # Prints a message if TFLint is not found
+                            wget https://github.com/terraform-linters/tflint/releases/download/v0.47.0/tflint_linux_amd64.zip  # Downloads TFLint 0.47.0
+                            unzip tflint_linux_amd64.zip  # Unzips the downloaded file
+                            sudo mv tflint /usr/local/bin/  # Moves the TFLint binary to a system-wide location
+                        else
+                            echo "TFLint already installed: $(tflint --version)"  # Prints the TFLint version if already installed
+                        fi
+                    '''
+                }
+            }
+        }
+
+        // Stage 4: Run TFLint
+        stage('Run TFLint') {
+            steps {
+                dir('terraform') {  // Changes to the terraform directory
+                    sh 'tflint --init'  # Initializes TFLint (downloads provider plugins if needed)
+                    sh 'tflint --recursive'  # Runs TFLint to lint the Terraform code for best practices
+                }
+            }
+        }
+
+        // Stage 5: Install TFSec
+        stage('Install TFSec') {
+            steps {
+                script {
+                    sh '''
+                        if ! command -v tfsec &> /dev/null; then  # Checks if TFSec is installed
+                            echo "TFSec not found, installing..."  # Prints a message if TFSec is not found
+                            wget https://github.com/aquasecurity/tfsec/releases/download/v1.28.1/tfsec-linux-amd64  # Downloads TFSec 1.28.1
+                            chmod +x tfsec-linux-amd64  # Makes the TFSec binary executable
+                            sudo mv tfsec-linux-amd64 /usr/local/bin/tfsec  # Moves the TFSec binary to a system-wide location
+                        else
+                            echo "TFSec already installed: $(tfsec --version)"  # Prints the TFSec version if already installed
+                        fi
+                    '''
+                }
+            }
+        }
+
+        // Stage 6: Run TFSec
+        stage('Run TFSec') {
+            steps {
+                dir('terraform') {  // Changes to the terraform directory
+                    sh 'tfsec .'  # Runs TFSec to scan the Terraform code for security issues
+                }
+            }
+        }
+
+        // Stage 7: Terraform Init
+        stage('Terraform Init') {
+            steps {
+                dir('terraform') {  // Changes to the terraform directory
+                    sh 'terraform init'  # Initializes the Terraform working directory (downloads providers, sets up backend)
+                }
+            }
+        }
+
+        // Stage 8: Terraform Validate
+        stage('Terraform Validate') {
+            steps {
+                dir('terraform') {  // Changes to the terraform directory
+                    sh 'terraform validate'  # Validates the Terraform configuration for syntax and correctness
+                }
+            }
+        }
+
+        // Stage 9: Terraform Plan
+        stage('Terraform Plan') {
+            steps {
+                dir('terraform') {  // Changes to the terraform directory
+                    // Generates a Terraform plan using the environment-specific tfvars file
+                    sh "terraform plan -var-file=${params.ENVIRONMENT}.tfvars -out=${TF_PLAN_FILE}"
+                }
+            }
+        }
+
+        // Stage 10: Terraform Apply
+        stage('Terraform Apply') {
+            steps {
+                dir('terraform') {  // Changes to the terraform directory
+                    sh "terraform apply -auto-approve ${TF_PLAN_FILE}"  # Applies the Terraform plan to provision resources
+                }
+            }
+        }
+
+        // Stage 11: Build Docker Image
+        stage('Build Docker Image') {
+            steps {
+                dir('app') {  // Changes to the app directory
+                    script {
+                        // Builds a Docker image with a tag that includes the build number and environment
+                        docker.build("your-username/simple-app:${env.BUILD_NUMBER}-${params.ENVIRONMENT}")
+                    }
+                }
+            }
+        }
+
+        // Stage 12: Push Docker Image
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    // Authenticates with Docker Hub using credentials from Jenkins
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
+                        // Pushes the Docker image with the build number and environment tag
+                        docker.image("your-username/simple-app:${env.BUILD_NUMBER}-${params.ENVIRONMENT}").push()
+                        // Pushes the Docker image with the environment tag (e.g., dev, stage, prod)
+                        docker.image("your-username/simple-app:${env.BUILD_NUMBER}-${params.ENVIRONMENT}").push("${params.ENVIRONMENT}")
+                    }
+                }
+            }
+        }
+
+        // Stage 13: Deploy to EC2
+        stage('Deploy to EC2') {
+            steps {
+                script {
+                    // Gets the public IP of the EC2 instance from Terraform output
+                    def instanceIp = sh(script: "cd terraform && terraform output -raw instance_public_ip", returnStdout: true).trim()
+                    // SSHes into the EC2 instance and deploys the Docker container
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -i /path/to/your-key.pem ubuntu@${instanceIp} << 'EOF'
+                        docker pull your-username/simple-app:${params.ENVIRONMENT}  # Pulls the environment-specific Docker image
+                        docker stop simple-app || true  # Stops any existing container named simple-app (ignores errors)
+                        docker rm simple-app || true    # Removes any existing container named simple-app (ignores errors)
+                        docker run -d --name simple-app -p 80:3000 your-username/simple-app:${params.ENVIRONMENT}  # Runs the container on port 80
+                        EOF
+                    """
+                }
+            }
+        }
+    }
+
+    // Defines post-build actions
+    post {
+        success {
+            echo "Deployment to ${params.ENVIRONMENT} completed successfully!"  # Prints a success message with the environment
+        }
+        failure {
+            echo "Deployment to ${params.ENVIRONMENT} failed!"  # Prints a failure message with the environment
+        }
+        always {
+            cleanWs()  # Cleans the workspace after the build to free up space
+        }
+    }
+}
