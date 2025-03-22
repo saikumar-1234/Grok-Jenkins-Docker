@@ -68,8 +68,8 @@ pipeline {
         stage('Run TFLint') {
             steps {
                 dir('terraform') {  // Changes to the terraform directory
-                    sh 'tflint --init'  # Initializes TFLint (downloads provider plugins if needed)
-                    sh 'tflint --recursive'  # Runs TFLint to lint the Terraform code for best practices
+                    sh 'tflint --init'  // Initializes TFLint (downloads provider plugins if needed)
+                    sh 'tflint --recursive'  // Runs TFLint to lint the Terraform code for best practices
                 }
             }
         }
@@ -96,7 +96,7 @@ pipeline {
         stage('Run TFSec') {
             steps {
                 dir('terraform') {  // Changes to the terraform directory
-                    sh 'tfsec .'  # Runs TFSec to scan the Terraform code for security issues
+                    sh 'tfsec .'  // Runs TFSec to scan the Terraform code for security issues
                 }
             }
         }
@@ -105,7 +105,7 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 dir('terraform') {  // Changes to the terraform directory
-                    sh 'terraform init'  # Initializes the Terraform working directory (downloads providers, sets up backend)
+                    sh 'terraform init'  // Initializes the Terraform working directory (downloads providers, sets up backend)
                 }
             }
         }
@@ -114,7 +114,7 @@ pipeline {
         stage('Terraform Validate') {
             steps {
                 dir('terraform') {  // Changes to the terraform directory
-                    sh 'terraform validate'  # Validates the Terraform configuration for syntax and correctness
+                    sh 'terraform validate'  // Validates the Terraform configuration for syntax and correctness
                 }
             }
         }
@@ -133,7 +133,7 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 dir('terraform') {  // Changes to the terraform directory
-                    sh "terraform apply -auto-approve ${TF_PLAN_FILE}"  # Applies the Terraform plan to provision resources
+                    sh "terraform apply -auto-approve ${TF_PLAN_FILE}"  // Applies the Terraform plan to provision resources
                 }
             }
         }
