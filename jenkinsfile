@@ -4,7 +4,7 @@ pipeline {
 
     // Defines pipeline parameters for user input
     parameters {
-        choice(name: 'ENVIRONMENT', choices: ['dev', 'stage', 'prod'], description: 'Select the environment to deploy to')  // Adds a dropdown to select the environment
+        choice(name: 'ENVIRONMENT', choices: ['main', 'stage', 'prod'], description: 'Select the environment to deploy to')  // Adds a dropdown to select the environment
     }
 
     // Defines environment variables for the pipeline
