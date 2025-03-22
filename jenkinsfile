@@ -188,13 +188,13 @@ pipeline {
     // Defines post-build actions
     post {
         success {
-            echo "Deployment to ${params.ENVIRONMENT} completed successfully!"  # Prints a success message with the environment
+            echo "Deployment to ${params.ENVIRONMENT} completed successfully!"  // Prints a success message with the environment
         }
         failure {
-            echo "Deployment to ${params.ENVIRONMENT} failed!"  # Prints a failure message with the environment
+            echo "Deployment to ${params.ENVIRONMENT} failed!"  // Prints a failure message with the environment
         }
         always {
-            cleanWs()  # Cleans the workspace after the build to free up space
+            cleanWs()  // Cleans the workspace after the build to free up space
         }
     }
 }
