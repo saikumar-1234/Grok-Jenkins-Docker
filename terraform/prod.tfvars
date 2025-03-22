@@ -8,7 +8,7 @@ vpc_cidr      = "10.2.0.0/16"
 subnet_cidr   = "10.2.1.0/24"
 
 # Sets the AMI ID for the prod environment (Ubuntu 20.04 in us-west-2, placeholder)
-ami_id        = "ami-0c55b159cbfafe1f0"
+ami_id        = "ami-08b5b3a93ed654d19"
 
 # Sets the instance type for the prod environment (larger instance for production load)
 instance_type = "t3.large"
