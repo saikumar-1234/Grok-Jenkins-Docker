@@ -28,23 +28,38 @@ pipeline {
 
         // Stage 2: Install Terraform
         stage('Install Terraform') {
-            steps {
-                script {  // Uses a script block to run shell commands
-                    sh '''  # Executes a multi-line shell script
-                        if ! command -v terraform &> /dev/null; then  # Checks if Terraform is installed
-                            echo "Terraform not found, installing..."  # Prints a message if Terraform is not found
-                            sudo apt-get update -y  # Updates the package list
-                            sudo apt-get install -y unzip  # Installs unzip to extract the Terraform binary
-                            wget https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip  # Downloads Terraform 1.5.7
-                            unzip terraform_1.5.7_linux_amd64.zip  # Unzips the downloaded file
-                            sudo mv terraform /usr/local/bin/  # Moves the Terraform binary to a system-wide location
-                        else
-                            echo "Terraform already installed: $(terraform --version)"  # Prints the Terraform version if already installed
-                        fi
-                    '''
-                }
-            }
+    steps {
+        script {
+            sh '''
+                if ! command -v terraform &> /dev/null; then
+                    echo "Terraform not found, installing..."
+                    
+                    if [ -f /etc/debian_version ]; then
+                        echo "Detected Debian-based system"
+                        sudo apt-get update -y
+                        sudo apt-get install -y unzip wget
+                    elif [ -f /etc/redhat-release ]; then
+                        echo "Detected RHEL-based system"
+                        sudo yum install -y unzip wget
+                    elif [ -f /etc/alpine-release ]; then
+                        echo "Detected Alpine Linux"
+                        sudo apk add --no-cache unzip wget
+                    else
+                        echo "Unsupported OS"
+                        exit 1
+                    fi
+
+                    wget https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip
+                    unzip terraform_1.5.7_linux_amd64.zip
+                    sudo mv terraform /usr/local/bin/
+                else
+                    echo "Terraform already installed: $(terraform --version)"
+                fi
+            '''
         }
+    }
+}
+
 
         // Stage 3: Install TFLint
         stage('Install TFLint') {
