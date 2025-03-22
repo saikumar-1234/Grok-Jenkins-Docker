@@ -47,7 +47,7 @@ pipeline {
             }
         }
 
-    */
+    
 
 
         // Stage 3: Install TFLint
@@ -104,6 +104,8 @@ pipeline {
                 }
             }
         }
+
+    */
 
         // Stage 7: Terraform Init
         stage('Terraform Init') {
