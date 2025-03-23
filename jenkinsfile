@@ -180,10 +180,10 @@ pipeline {
                     // SSHes into the EC2 instance and deploys the Docker container
                     sh """
                         ssh -o StrictHostKeyChecking=no -i /path/to/your-key.pem ubuntu@${instanceIp} << 'EOF'
-                        docker pull your-username/simple-app:${params.ENVIRONMENT}  # Pulls the environment-specific Docker image
-                        docker stop simple-app || true  # Stops any existing container named simple-app (ignores errors)
-                        docker rm simple-app || true    # Removes any existing container named simple-app (ignores errors)
-                        docker run -d --name simple-app -p 80:3000 your-username/simple-app:${params.ENVIRONMENT}  # Runs the container on port 80
+                        docker pull saikotagiri/simple-app:${params.ENVIRONMENT}  // Pulls the environment-specific Docker image
+                        docker stop simple-app || true  // Stops any existing container named simple-app (ignores errors)
+                        docker rm simple-app || true    // Removes any existing container named simple-app (ignores errors)
+                        docker run -d --name simple-app -p 80:3000 your-username/simple-app:${params.ENVIRONMENT}  // Runs the container on port 80
                         EOF
                     """
                 }
